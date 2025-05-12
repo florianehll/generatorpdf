@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur de Rapports de Mission</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Générateur de Rapports de Mission</h1>
+      <p>Créez facilement des rapports de simulation de combat aérien</p>
+    </header>
+
+    <main>
+      <form id="mission-form">
+        <div class="form-section">
+          <h2>Informations du Pilote</h2>
+          <div class="form-group">
+            <label for="pilotName">Nom du Pilote</label>
+            <input type="text" id="pilotName" name="pilotName" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="pilotPhoto">Photo du Pilote</label>
+            <div class="file-input-container">
+              <input type="text" id="pilotPhotoPath" readonly>
+              <button type="button" id="selectPilotPhoto">Parcourir</button>
+            </div>
+            <div id="pilotPhotoPreview" class="preview-container"></div>
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h2>Informations de l'Instructeur</h2>
+          <div class="form-group">
+            <label for="instructorName">Nom de l'Instructeur</label>
+            <input type="text" id="instructorName" name="instructorName" required>
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h2>Détails de la Mission</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="missionDate">Date</label>
+              <input type="date" id="missionDate" name="missionDate" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="missionType">Type de Mission</label>
+              <select id="missionType" name="missionType" required>
+                <option value="">Sélectionner...</option>
+                <option value="AIR - GROUND">AIR - GROUND</option>
+                <option value="AIR - AIR">AIR - AIR</option>
+                <option value="MIXED">MIXED</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="missionName">Nom de la Mission</label>
+              <input type="text" id="missionName" name="missionName">
+            </div>
+            
+            <div class="form-group">
+              <label for="aircraft">Avion</label>
+              <input type="text" id="aircraft" name="aircraft" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="map">Carte</label>
+            <input type="text" id="map" name="map">
+          </div>
+        </div>
+        
+        <div class="form-section">
+          <h2>Données de Performance</h2>
+          <div id="rounds-container">
+            <!-- Les rounds seront ajoutés dynamiquement ici -->
+          </div>
+          <div class="button-container">
+            <button type="button" id="addRoundBtn" class="btn-secondary">Ajouter un Round</button>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" id="generateReportBtn" class="btn-primary">Générer le Rapport PDF</button>
+        </div>
+      </form>
+    </main>
+    
+    <div id="status-container" class="hidden">
+      <div id="status-message"></div>
+      <div class="button-container">
+        <button type="button" id="openReportBtn" class="btn-primary hidden">Ouvrir le Rapport</button>
+        <button type="button" id="closeStatusBtn" class="btn-secondary">Fermer</button>
+      </div>
+    </div>
+    
+    <!-- Template pour un round -->
+    <template id="round-template">
+      <div class="round">
+        <div class="round-header">
+          <h3>Round <span class="round-number"></span></h3>
+          <button type="button" class="remove-round-btn">Supprimer</button>
+        </div>
+        
+        <div class="form-group">
+          <label>Graphique de Performance</label>
+          <div class="file-input-container">
+            <input type="text" class="chart-path" readonly>
+            <button type="button" class="select-chart-btn">Parcourir</button>
+          </div>
+          <div class="chart-preview preview-container"></div>
+        </div>
+        
+        <div class="shots-section">
+          <div class="shots-header">
+            <h4>Détails des Tirs</h4>
+            <button type="button" class="add-shot-btn">Ajouter un Tir</button>
+          </div>
+          
+          <table class="shots-table">
+            <thead>
+              <tr>
+                <th>N° Tir</th>
+                <th>Vitesse</th>
+                <th>Altitude</th>
+                <th>Distance</th>
+                <th>Cible Touchée</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody class="shots-container">
+              <!-- Les tirs seront ajoutés dynamiquement ici -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+    
+    <!-- Template pour un tir -->
+    <template id="shot-template">
+      <tr class="shot">
+        <td>
+          <input type="number" class="shot-number" required min="1">
+        </td>
+        <td>
+          <input type="number" step="0.01" class="shot-speed" required min="0">
+        </td>
+        <td>
+          <input type="number" step="0.01" class="shot-altitude" required>
+        </td>
+        <td>
+          <input type="number" step="0.01" class="shot-distance" required min="0">
+        </td>
+        <td>
+          <select class="shot-hit" required>
+            <option value="false">NON</option>
+            <option value="true">OUI</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="remove-shot-btn">X</button>
+        </td>
+      </tr>
+    </template>
+  </div>
+  
+  <script src="js/renderer.js"></script>
+</body>
+</html>
