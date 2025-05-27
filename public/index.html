@@ -3,57 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Générateur de Rapports de Mission</title>
+  <title>Générateur de Rapports de Mission ARESIA</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome pour les icônes -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- CSS personnalisé -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>Générateur de Rapports de Mission</h1>
-      <p>Créez facilement des rapports de simulation de combat aérien</p>
+    <header class="header">
+      <div class="header-content">
+        <div class="logo-section">
+          <h1><i class="fas fa-fighter-jet"></i> ARESIA</h1>
+          <p class="tagline">Bolder together</p>
+        </div>
+        <div class="title-section">
+          <h2>Virtual Air Combat Engagement</h2>
+          <p>Simulator for live fire training</p>
+        </div>
+      </div>
     </header>
 
-    <main>
+    <main class="main-content">
       <form id="mission-form">
-        <div class="form-section">
-          <h2>Informations du Pilote</h2>
-          <div class="form-group">
-            <label for="pilotName">Nom du Pilote</label>
-            <input type="text" id="pilotName" name="pilotName" required>
+        <!-- Section Informations du Pilote -->
+        <section class="form-section" id="pilot-section">
+          <div class="section-header">
+            <h3><i class="fas fa-user-pilot"></i> Informations du Pilote</h3>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pilotName">Nom du Pilote *</label>
+              <input type="text" id="pilotName" name="pilotName" required 
+                     placeholder="Entrez le nom du pilote">
+            </div>
           </div>
           
           <div class="form-group">
-            <label for="pilotPhoto">Photo du Pilote</label>
-            <div class="file-input-container">
-              <input type="text" id="pilotPhotoPath" readonly>
-              <button type="button" id="selectPilotPhoto">Parcourir</button>
+            <label>Photo du Pilote</label>
+            <div class="file-upload-area" id="pilotPhotoUpload">
+              <div class="upload-content">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Cliquez pour sélectionner une photo</p>
+                <span class="file-types">JPG, PNG (Max: 5MB)</span>
+              </div>
+              <input type="file" id="pilotPhoto" accept="image/*" hidden>
+              <div class="file-preview" id="pilotPhotoPreview"></div>
             </div>
-            <div id="pilotPhotoPreview" class="preview-container"></div>
           </div>
-        </div>
-        
-        <div class="form-section">
-          <h2>Informations de l'Instructeur</h2>
-          <div class="form-group">
-            <label for="instructorName">Nom de l'Instructeur</label>
-            <input type="text" id="instructorName" name="instructorName" required>
+        </section>
+
+        <!-- Section Informations de l'Instructeur -->
+        <section class="form-section" id="instructor-section">
+          <div class="section-header">
+            <h3><i class="fas fa-chalkboard-teacher"></i> Informations de l'Instructeur</h3>
           </div>
-        </div>
-        
-        <div class="form-section">
-          <h2>Détails de la Mission</h2>
+          
           <div class="form-row">
             <div class="form-group">
-              <label for="missionDate">Date</label>
+              <label for="instructorName">Nom de l'Instructeur *</label>
+              <input type="text" id="instructorName" name="instructorName" required 
+                     placeholder="Entrez le nom de l'instructeur">
+            </div>
+          </div>
+        </section>
+
+        <!-- Section Détails de la Mission -->
+        <section class="form-section" id="mission-section">
+          <div class="section-header">
+            <h3><i class="fas fa-plane"></i> Détails de la Mission</h3>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="missionDate">Date de la Mission *</label>
               <input type="date" id="missionDate" name="missionDate" required>
             </div>
             
             <div class="form-group">
-              <label for="missionType">Type de Mission</label>
+              <label for="missionType">Type de Mission *</label>
               <select id="missionType" name="missionType" required>
-                <option value="">Sélectionner...</option>
-                <option value="AIR - GROUND">AIR - GROUND</option>
-                <option value="AIR - AIR">AIR - AIR</option>
+                <option value="">Sélectionner le type...</option>
+                <option value="AIR-GROUND">AIR-GROUND</option>
+                <option value="AIR-AIR">AIR-AIR</option>
                 <option value="MIXED">MIXED</option>
               </select>
             </div>
@@ -62,115 +100,118 @@
           <div class="form-row">
             <div class="form-group">
               <label for="missionName">Nom de la Mission</label>
-              <input type="text" id="missionName" name="missionName">
+              <input type="text" id="missionName" name="missionName" 
+                     placeholder="Nom optionnel de la mission">
             </div>
             
             <div class="form-group">
-              <label for="aircraft">Avion</label>
-              <input type="text" id="aircraft" name="aircraft" required>
+              <label for="aircraft">Avion Utilisé *</label>
+              <input type="text" id="aircraft" name="aircraft" required 
+                     placeholder="Ex: F-16, Mirage 2000, etc.">
             </div>
           </div>
           
-          <div class="form-group">
-            <label for="map">Carte</label>
-            <input type="text" id="map" name="map">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="map">Carte/Terrain</label>
+              <input type="text" id="map" name="map" 
+                     placeholder="Zone d'entraînement ou carte utilisée">
+            </div>
           </div>
-        </div>
-        
-        <div class="form-section">
-          <h2>Données de Performance</h2>
-          <div id="rounds-container">
+        </section>
+
+        <!-- Section Graphiques de Performance -->
+        <section class="form-section" id="rounds-section">
+          <div class="section-header">
+            <h3><i class="fas fa-chart-line"></i> Graphiques de Performance</h3>
+            <button type="button" class="btn btn-add" id="addRoundBtn">
+              <i class="fas fa-plus"></i> Ajouter un Round
+            </button>
+          </div>
+          
+          <div id="roundsContainer" class="rounds-container">
             <!-- Les rounds seront ajoutés dynamiquement ici -->
           </div>
-          <div class="button-container">
-            <button type="button" id="addRoundBtn" class="btn-secondary">Ajouter un Round</button>
+          
+          <div class="rounds-info">
+            <p><i class="fas fa-info-circle"></i> 
+               Les graphiques montrent les trajectoires de tir. Ajoutez au moins un round pour générer le rapport.
+            </p>
           </div>
-        </div>
-        
+        </section>
+
+        <!-- Actions -->
         <div class="form-actions">
-          <button type="submit" id="generateReportBtn" class="btn-primary">Générer le Rapport PDF</button>
+          <button type="button" class="btn btn-secondary" id="resetBtn">
+            <i class="fas fa-undo"></i> Réinitialiser
+          </button>
+          <button type="submit" class="btn btn-primary" id="generateBtn">
+            <i class="fas fa-file-pdf"></i> Générer le Rapport PDF
+          </button>
         </div>
       </form>
     </main>
-    
-    <div id="status-container" class="hidden">
-      <div id="status-message"></div>
-      <div class="button-container">
-        <button type="button" id="openReportBtn" class="btn-primary hidden">Ouvrir le Rapport</button>
-        <button type="button" id="closeStatusBtn" class="btn-secondary">Fermer</button>
+  </div>
+
+  <!-- Modal de Statut -->
+  <div id="statusModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 id="modalTitle">Information</h4>
+        <button type="button" class="modal-close" id="closeModalBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="loadingSpinner" class="loading-spinner hidden">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        <div id="statusMessage" class="status-message"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="closeStatusBtn">
+          Fermer
+        </button>
+        <button type="button" class="btn btn-primary hidden" id="downloadBtn">
+          <i class="fas fa-download"></i> Télécharger
+        </button>
       </div>
     </div>
-    
-    <!-- Template pour un round -->
-    <template id="round-template">
-      <div class="round">
-        <div class="round-header">
-          <h3>Round <span class="round-number"></span></h3>
-          <button type="button" class="remove-round-btn">Supprimer</button>
-        </div>
-        
+  </div>
+
+  <!-- Template pour les rounds -->
+  <template id="roundTemplate">
+    <div class="round-item" data-round-id="">
+      <div class="round-header">
+        <h4 class="round-title">
+          <i class="fas fa-bullseye"></i> Round <span class="round-number"></span>
+        </h4>
+        <button type="button" class="btn btn-danger btn-sm remove-round-btn">
+          <i class="fas fa-trash"></i> Supprimer
+        </button>
+      </div>
+      
+      <div class="round-content">
         <div class="form-group">
-          <label>Graphique de Performance</label>
-          <div class="file-input-container">
-            <input type="text" class="chart-path" readonly>
-            <button type="button" class="select-chart-btn">Parcourir</button>
+          <label>Graphique de Performance *</label>
+          <div class="file-upload-area round-graphic-upload">
+            <div class="upload-content">
+              <i class="fas fa-chart-area"></i>
+              <p>Sélectionner le graphique de ce round</p>
+              <span class="file-types">PNG, JPG (Recommandé: 1920x1080)</span>
+            </div>
+            <input type="file" class="round-graphic-input" accept="image/*" hidden>
+            <div class="file-preview round-graphic-preview"></div>
           </div>
-          <div class="chart-preview preview-container"></div>
-        </div>
-        
-        <div class="shots-section">
-          <div class="shots-header">
-            <h4>Détails des Tirs</h4>
-            <button type="button" class="add-shot-btn">Ajouter un Tir</button>
-          </div>
-          
-          <table class="shots-table">
-            <thead>
-              <tr>
-                <th>N° Tir</th>
-                <th>Vitesse</th>
-                <th>Altitude</th>
-                <th>Distance</th>
-                <th>Cible Touchée</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody class="shots-container">
-              <!-- Les tirs seront ajoutés dynamiquement ici -->
-            </tbody>
-          </table>
         </div>
       </div>
-    </template>
-    
-    <!-- Template pour un tir -->
-    <template id="shot-template">
-      <tr class="shot">
-        <td>
-          <input type="number" class="shot-number" required min="1">
-        </td>
-        <td>
-          <input type="number" step="0.01" class="shot-speed" required min="0">
-        </td>
-        <td>
-          <input type="number" step="0.01" class="shot-altitude" required>
-        </td>
-        <td>
-          <input type="number" step="0.01" class="shot-distance" required min="0">
-        </td>
-        <td>
-          <select class="shot-hit" required>
-            <option value="false">NON</option>
-            <option value="true">OUI</option>
-          </select>
-        </td>
-        <td>
-          <button type="button" class="remove-shot-btn">X</button>
-        </td>
-      </tr>
-    </template>
-  </div>
-  
-  <script src="js/renderer.js"></script>
+    </div>
+  </template>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="js/file-handler.js"></script>
+  <script src="js/pdf-generator.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
