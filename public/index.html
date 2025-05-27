@@ -5,19 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Générateur de Rapports de Mission ARESIA</title>
   
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="assets/images/logo.png">
+  <!-- Favicon dynamique -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%231C3062' width='100' height='100' rx='15'/><text x='50' y='65' text-anchor='middle' fill='white' font-size='35' font-weight='bold' font-family='Arial'>A</text></svg>">
   
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Google Fonts - Montserrat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Font Awesome pour les icônes -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- CSS personnalisé -->
   <link rel="stylesheet" href="css/styles.css">
+  
+  <!-- Meta tags pour SEO et partage -->
+  <meta name="description" content="Générateur de rapports de mission pour le simulateur d'entraînement ARESIA - Virtual Air Combat Engagement">
+  <meta name="keywords" content="ARESIA, simulation, aviation, training, rapport, mission">
+  <meta name="author" content="ARESIA">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ARESIA - Virtual Air Combat Training">
+  <meta property="og:description" content="Simulateur d'entraînement au combat aérien virtuel">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:title" content="ARESIA - Virtual Air Combat Training">
+  <meta property="twitter:description" content="Simulateur d'entraînement au combat aérien virtuel">
 </head>
 <body>
+  <!-- Loader de page -->
+  <div id="pageLoader" class="page-loader">
+    <div class="loader-content">
+      <div class="loader-spinner"></div>
+      <p>Chargement d'ARESIA...</p>
+    </div>
+  </div>
+
   <div class="container">
     <header class="header">
       <div class="header-content">
@@ -33,28 +58,44 @@
     </header>
 
     <main class="main-content">
-      <form id="mission-form">
+      <form id="mission-form" novalidate>
         <!-- Section Informations du Pilote -->
         <section class="form-section" id="pilot-section">
           <div class="section-header">
             <h3><i class="fas fa-user-pilot"></i> Informations du Pilote</h3>
+            <div class="section-badge">
+              <i class="fas fa-star"></i>
+              <span>Obligatoire</span>
+            </div>
           </div>
           
           <div class="form-row">
             <div class="form-group">
-              <label for="pilotName">Nom du Pilote *</label>
-              <input type="text" id="pilotName" name="pilotName" required 
-                     placeholder="Entrez le nom du pilote">
+              <label for="pilotName">
+                <i class="fas fa-user"></i>
+                Nom du Pilote *
+              </label>
+              <input type="text" 
+                     id="pilotName" 
+                     name="pilotName" 
+                     required 
+                     autocomplete="name"
+                     placeholder="Entrez le nom complet du pilote"
+                     data-user-modified="false">
             </div>
           </div>
           
           <div class="form-group">
-            <label>Photo du Pilote</label>
+            <label>
+              <i class="fas fa-camera"></i>
+              Photo du Pilote
+              <small class="optional-label">(Optionnel)</small>
+            </label>
             <div class="file-upload-area" id="pilotPhotoUpload">
               <div class="upload-content">
                 <i class="fas fa-cloud-upload-alt"></i>
                 <p>Cliquez pour sélectionner une photo</p>
-                <span class="file-types">JPG, PNG (Max: 5MB)</span>
+                <span class="file-types">JPG, PNG, GIF (Max: 5MB)</span>
               </div>
               <input type="file" id="pilotPhoto" accept="image/*" hidden>
               <div class="file-preview" id="pilotPhotoPreview"></div>
@@ -66,13 +107,25 @@
         <section class="form-section" id="instructor-section">
           <div class="section-header">
             <h3><i class="fas fa-chalkboard-teacher"></i> Informations de l'Instructeur</h3>
+            <div class="section-badge">
+              <i class="fas fa-star"></i>
+              <span>Obligatoire</span>
+            </div>
           </div>
           
           <div class="form-row">
             <div class="form-group">
-              <label for="instructorName">Nom de l'Instructeur *</label>
-              <input type="text" id="instructorName" name="instructorName" required 
-                     placeholder="Entrez le nom de l'instructeur">
+              <label for="instructorName">
+                <i class="fas fa-user-graduate"></i>
+                Nom de l'Instructeur *
+              </label>
+              <input type="text" 
+                     id="instructorName" 
+                     name="instructorName" 
+                     required 
+                     autocomplete="name"
+                     placeholder="Entrez le nom de l'instructeur"
+                     data-user-modified="false">
             </div>
           </div>
         </section>
@@ -81,44 +134,126 @@
         <section class="form-section" id="mission-section">
           <div class="section-header">
             <h3><i class="fas fa-plane"></i> Détails de la Mission</h3>
+            <div class="section-info">
+              <i class="fas fa-info-circle"></i>
+              <span>Configuration de l'entraînement</span>
+            </div>
           </div>
           
           <div class="form-row">
             <div class="form-group">
-              <label for="missionDate">Date de la Mission *</label>
-              <input type="date" id="missionDate" name="missionDate" required>
+              <label for="missionDate">
+                <i class="fas fa-calendar-alt"></i>
+                Date de la Mission *
+              </label>
+              <input type="date" 
+                     id="missionDate" 
+                     name="missionDate" 
+                     required
+                     data-user-modified="false">
             </div>
             
             <div class="form-group">
-              <label for="missionType">Type de Mission *</label>
-              <select id="missionType" name="missionType" required>
-                <option value="">Sélectionner le type...</option>
-                <option value="AIR-GROUND">AIR-GROUND</option>
-                <option value="AIR-AIR">AIR-AIR</option>
-                <option value="MIXED">MIXED</option>
+              <label for="missionType">
+                <i class="fas fa-tasks"></i>
+                Type de Mission *
+              </label>
+              <select id="missionType" name="missionType" required data-user-modified="false">
+                <option value="">Sélectionner le type de mission...</option>
+                <option value="AIR-GROUND">
+                  <i class="fas fa-crosshairs"></i>
+                  AIR-GROUND - Combat Air-Sol
+                </option>
+                <option value="AIR-AIR">
+                  <i class="fas fa-plane"></i>
+                  AIR-AIR - Combat Air-Air
+                </option>
+                <option value="MIXED">
+                  <i class="fas fa-random"></i>
+                  MIXED - Mission Mixte
+                </option>
+                <option value="TRAINING">
+                  <i class="fas fa-graduation-cap"></i>
+                  TRAINING - Entraînement Standard
+                </option>
               </select>
             </div>
           </div>
           
           <div class="form-row">
             <div class="form-group">
-              <label for="missionName">Nom de la Mission</label>
-              <input type="text" id="missionName" name="missionName" 
-                     placeholder="Nom optionnel de la mission">
+              <label for="missionName">
+                <i class="fas fa-tag"></i>
+                Nom de la Mission
+                <small class="optional-label">(Optionnel)</small>
+              </label>
+              <input type="text" 
+                     id="missionName" 
+                     name="missionName" 
+                     placeholder="Ex: Operation Thunder, Mission Alpha, etc."
+                     maxlength="50">
             </div>
             
             <div class="form-group">
-              <label for="aircraft">Avion Utilisé *</label>
-              <input type="text" id="aircraft" name="aircraft" required 
-                     placeholder="Ex: F-16, Mirage 2000, etc.">
+              <label for="aircraft">
+                <i class="fas fa-fighter-jet"></i>
+                Avion Utilisé *
+              </label>
+              <input type="text" 
+                     id="aircraft" 
+                     name="aircraft" 
+                     required 
+                     placeholder="Ex: F-16 Fighting Falcon, Mirage 2000, Rafale"
+                     list="aircraftSuggestions"
+                     data-user-modified="false">
+              <datalist id="aircraftSuggestions">
+                <option value="F-16 Fighting Falcon">
+                <option value="Mirage 2000">
+                <option value="Rafale">
+                <option value="F/A-18 Hornet">
+                <option value="Eurofighter Typhoon">
+                <option value="F-22 Raptor">
+                <option value="F-35 Lightning II">
+              </datalist>
             </div>
           </div>
           
           <div class="form-row">
             <div class="form-group">
-              <label for="map">Carte/Terrain</label>
-              <input type="text" id="map" name="map" 
-                     placeholder="Zone d'entraînement ou carte utilisée">
+              <label for="map">
+                <i class="fas fa-map"></i>
+                Carte/Terrain d'Entraînement
+                <small class="optional-label">(Optionnel)</small>
+              </label>
+              <input type="text" 
+                     id="map" 
+                     name="map" 
+                     placeholder="Ex: Zone Alpha, Terrain Méditerranée, Base Nevada"
+                     list="mapSuggestions">
+              <datalist id="mapSuggestions">
+                <option value="Nevada Test Range">
+                <option value="Persian Gulf">
+                <option value="Normandy 1944">
+                <option value="Syria">
+                <option value="The Channel">
+                <option value="Caucasus">
+              </datalist>
+            </div>
+            
+            <div class="form-group">
+              <label for="weather">
+                <i class="fas fa-cloud-sun"></i>
+                Conditions Météo
+                <small class="optional-label">(Optionnel)</small>
+              </label>
+              <select id="weather" name="weather">
+                <option value="">Conditions par défaut</option>
+                <option value="CLEAR">☀️ Ciel dégagé</option>
+                <option value="CLOUDY">☁️ Nuageux</option>
+                <option value="OVERCAST">🌫️ Couvert</option>
+                <option value="RAIN">🌧️ Pluvieux</option>
+                <option value="STORM">⛈️ Orageux</option>
+              </select>
             </div>
           </div>
         </section>
@@ -137,9 +272,34 @@
           </div>
           
           <div class="rounds-info">
-            <p><i class="fas fa-info-circle"></i> 
-               Les graphiques montrent les trajectoires de tir. Ajoutez au moins un round pour générer le rapport.
-            </p>
+            <div class="info-content">
+              <i class="fas fa-info-circle"></i>
+              <div class="info-text">
+                <p><strong>À propos des graphiques :</strong></p>
+                <p>Les graphiques montrent les trajectoires de tir et les performances. 
+                   La fenêtre jaune représente la fenêtre de tir, les points noirs indiquent 
+                   les moments de tir, et les triangles verts signalent les impacts réussis.</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Statistiques en temps réel -->
+          <div class="rounds-stats">
+            <div class="stat-item">
+              <i class="fas fa-bullseye"></i>
+              <span class="stat-value" id="totalRounds">0</span>
+              <span class="stat-label">Rounds</span>
+            </div>
+            <div class="stat-item">
+              <i class="fas fa-chart-area"></i>
+              <span class="stat-value" id="withGraphics">0</span>
+              <span class="stat-label">Avec Graphiques</span>
+            </div>
+            <div class="stat-item">
+              <i class="fas fa-percentage"></i>
+              <span class="stat-value" id="completionRate">0%</span>
+              <span class="stat-label">Complétion</span>
+            </div>
           </div>
         </section>
 
@@ -147,6 +307,9 @@
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" id="resetBtn">
             <i class="fas fa-undo"></i> Réinitialiser
+          </button>
+          <button type="button" class="btn btn-info" id="previewBtn">
+            <i class="fas fa-eye"></i> Aperçu
           </button>
           <button type="submit" class="btn btn-primary" id="generateBtn">
             <i class="fas fa-file-pdf"></i> Générer le Rapport PDF
@@ -161,22 +324,58 @@
     <div class="modal-content">
       <div class="modal-header">
         <h4 id="modalTitle">Information</h4>
-        <button type="button" class="modal-close" id="closeModalBtn">
+        <button type="button" class="modal-close" id="closeModalBtn" aria-label="Fermer">
           <i class="fas fa-times"></i>
         </button>
       </div>
       <div class="modal-body">
         <div id="loadingSpinner" class="loading-spinner hidden">
-          <i class="fas fa-spinner fa-spin"></i>
+          <div class="spinner-animation">
+            <i class="fas fa-cog fa-spin"></i>
+            <i class="fas fa-plane"></i>
+          </div>
         </div>
         <div id="statusMessage" class="status-message"></div>
+        
+        <!-- Progress bar pour la génération -->
+        <div id="progressContainer" class="progress-container hidden">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <p class="progress-text" id="progressText">Initialisation...</p>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="closeStatusBtn">
-          Fermer
+          <i class="fas fa-times"></i> Fermer
         </button>
         <button type="button" class="btn btn-primary hidden" id="downloadBtn">
           <i class="fas fa-download"></i> Télécharger
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'aperçu -->
+  <div id="previewModal" class="modal hidden">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h4><i class="fas fa-eye"></i> Aperçu du Rapport</h4>
+        <button type="button" class="modal-close" id="closePreviewBtn" aria-label="Fermer">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="previewContent" class="preview-content">
+          <!-- Le contenu d'aperçu sera généré ici -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="closePreview2Btn">
+          Fermer
+        </button>
+        <button type="button" class="btn btn-primary" id="generateFromPreviewBtn">
+          <i class="fas fa-file-pdf"></i> Générer PDF
         </button>
       </div>
     </div>
@@ -186,35 +385,358 @@
   <template id="roundTemplate">
     <div class="round-item" data-round-id="">
       <div class="round-header">
-        <h4 class="round-title">
-          <i class="fas fa-bullseye"></i> Round <span class="round-number"></span>
-        </h4>
-        <button type="button" class="btn btn-danger btn-sm remove-round-btn">
-          <i class="fas fa-trash"></i> Supprimer
-        </button>
+        <div class="round-title-section">
+          <h4 class="round-title">
+            <i class="fas fa-bullseye"></i> 
+            Round <span class="round-number"></span>
+          </h4>
+          <div class="round-status">
+            <span class="status-indicator" data-status="empty">
+              <i class="fas fa-circle"></i>
+              <span class="status-text">En attente</span>
+            </span>
+          </div>
+        </div>
+        <div class="round-actions">
+          <button type="button" class="btn btn-sm btn-secondary duplicate-round-btn" title="Dupliquer ce round">
+            <i class="fas fa-copy"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-danger remove-round-btn" title="Supprimer ce round">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
       </div>
       
       <div class="round-content">
-        <div class="form-group">
-          <label>Graphique de Performance *</label>
-          <div class="file-upload-area round-graphic-upload">
-            <div class="upload-content">
+        <div class="form-row">
+          <div class="form-group">
+            <label>
               <i class="fas fa-chart-area"></i>
-              <p>Sélectionner le graphique de ce round</p>
-              <span class="file-types">PNG, JPG (Recommandé: 1920x1080)</span>
+              Graphique de Performance
+              <small class="optional-label">(Recommandé)</small>
+            </label>
+            <div class="file-upload-area round-graphic-upload">
+              <div class="upload-content">
+                <i class="fas fa-chart-area"></i>
+                <p>Sélectionner le graphique de performance</p>
+                <span class="file-types">PNG, JPG, GIF (Recommandé: 1920x1080 ou 16:9)</span>
+              </div>
+              <input type="file" class="round-graphic-input" accept="image/*" hidden>
+              <div class="file-preview round-graphic-preview"></div>
             </div>
-            <input type="file" class="round-graphic-input" accept="image/*" hidden>
-            <div class="file-preview round-graphic-preview"></div>
+          </div>
+        </div>
+        
+        <!-- Informations supplémentaires du round -->
+        <div class="round-details">
+          <div class="form-row">
+            <div class="form-group">
+              <label>
+                <i class="fas fa-clock"></i>
+                Durée du Round (secondes)
+              </label>
+              <input type="number" class="round-duration" min="1" max="300" placeholder="Ex: 60">
+            </div>
+            <div class="form-group">
+              <label>
+                <i class="fas fa-target"></i>
+                Nombre de Tirs
+              </label>
+              <input type="number" class="round-shots" min="0" max="100" placeholder="Ex: 5">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <i class="fas fa-comment"></i>
+              Notes sur ce Round
+            </label>
+            <textarea class="round-notes" 
+                      rows="2" 
+                      maxlength="200" 
+                      placeholder="Commentaires, observations, points à améliorer..."></textarea>
+            <div class="char-counter">
+              <span class="char-count">0</span>/200
+            </div>
           </div>
         </div>
       </div>
     </div>
   </template>
 
+  <!-- Toast notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="js/file-handler.js"></script>
   <script src="js/pdf-generator.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- Script d'initialisation -->
+  <script>
+    // Masquer le loader une fois que tout est chargé
+    window.addEventListener('load', function() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => {
+          loader.style.display = 'none';
+        }, 500);
+      }
+    });
+
+    // Gestion des erreurs globales
+    window.addEventListener('error', function(e) {
+      console.error('Erreur globale:', e.error);
+    });
+
+    // Service Worker pour la mise en cache (optionnel)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => console.log('SW registered'))
+          .catch(error => console.log('SW registration failed'));
+      });
+    }
+  </script>
+
+  <!-- CSS additionnels pour les nouvelles fonctionnalités -->
+  <style>
+    /* Loader de page */
+    .page-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1C3062 0%, #4A90E2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+
+    .loader-content {
+      text-align: center;
+      color: white;
+    }
+
+    .loader-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top: 3px solid #FFD700;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Badges de section */
+    .section-badge, .section-info {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .section-badge {
+      background: rgba(220, 53, 69, 0.1);
+      color: #dc3545;
+      border: 1px solid #dc3545;
+    }
+
+    .section-info {
+      background: rgba(23, 162, 184, 0.1);
+      color: #17a2b8;
+      border: 1px solid #17a2b8;
+    }
+
+    /* Labels optionnels */
+    .optional-label {
+      font-weight: 300;
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    /* Statistiques des rounds */
+    .rounds-stats {
+      display: flex;
+      justify-content: space-around;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .stat-item {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-item i {
+      font-size: 1.5rem;
+      color: #4A90E2;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1C3062;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: #6c757d;
+      font-weight: 500;
+    }
+
+    /* Status des rounds */
+    .round-title-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .round-status .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .status-indicator[data-status="empty"] {
+      background: rgba(108, 117, 125, 0.1);
+      color: #6c757d;
+    }
+
+    .status-indicator[data-status="ready"] {
+      background: rgba(40, 167, 69, 0.1);
+      color: #28a745;
+    }
+
+    .status-indicator[data-status="partial"] {
+      background: rgba(255, 193, 7, 0.1);
+      color: #ffc107;
+    }
+
+    /* Actions des rounds */
+    .round-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Modal large */
+    .modal-large .modal-content {
+      max-width: 800px;
+      max-height: 90vh;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      margin-top: 20px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1C3062, #4A90E2);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.875rem;
+      color: #6c757d;
+    }
+
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1050;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Améliorations pour les détails des rounds */
+    .round-details {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e1e5e9;
+    }
+
+    .char-counter {
+      text-align: right;
+      font-size: 0.75rem;
+      color: #6c757d;
+      margin-top: 5px;
+    }
+
+    /* Spinner d'animation amélioré */
+    .spinner-animation {
+      position: relative;
+      display: inline-block;
+    }
+
+    .spinner-animation .fa-plane {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #FFD700;
+      font-size: 1rem;
+    }
+
+    .spinner-animation .fa-cog {
+      color: #4A90E2;
+      font-size: 2rem;
+    }
+
+    /* Responsive pour les nouvelles fonctionnalités */
+    @media (max-width: 768px) {
+      .rounds-stats {
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .round-title-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .round-actions {
+        align-self: flex-end;
+      }
+    }
+  </style>
 </body>
 </html>

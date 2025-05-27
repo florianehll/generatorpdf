@@ -1,6 +1,6 @@
 /**
- * Générateur de Rapports de Mission ARESIA
- * Application principale - Gestion des interactions utilisateur
+ * Application principale ARESIA - VERSION CORRIGÉE
+ * Correction du bug de validation des champs
  */
 
 // Variables globales
@@ -11,32 +11,19 @@ let formData = {};
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Initialisation de l\'application ARESIA');
     
-    // Définir la date par défaut
     setDefaultDate();
-    
-    // Ajouter un premier round par défaut
     addRound();
-    
-    // Initialiser les gestionnaires d'événements
     initializeEventListeners();
-    
-    // Initialiser les animations
     initializeAnimations();
     
     console.log('✅ Application initialisée avec succès');
 });
 
-/**
- * Définir la date par défaut à aujourd'hui
- */
 function setDefaultDate() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('missionDate').value = today;
 }
 
-/**
- * Initialiser tous les gestionnaires d'événements
- */
 function initializeEventListeners() {
     // Formulaire principal
     const form = document.getElementById('mission-form');
@@ -64,17 +51,13 @@ function initializeEventListeners() {
         }
     });
     
-    // Validation en temps réel
+    // CORRECTION : Validation en temps réel AMÉLIORÉE
     setupFormValidation();
     
     console.log('🔗 Gestionnaires d\'événements initialisés');
 }
 
-/**
- * Initialiser les animations d'entrée
- */
 function initializeAnimations() {
-    // Animer les sections du formulaire avec un délai
     const sections = document.querySelectorAll('.form-section');
     sections.forEach((section, index) => {
         section.style.animationDelay = `${index * 0.1}s`;
@@ -82,34 +65,55 @@ function initializeAnimations() {
 }
 
 /**
- * Configuration de la validation du formulaire
+ * CORRECTION : Configuration de validation améliorée
  */
 function setupFormValidation() {
     const requiredFields = document.querySelectorAll('input[required], select[required]');
     
     requiredFields.forEach(field => {
-        field.addEventListener('blur', validateField);
-        field.addEventListener('input', clearFieldError);
+        // Validation seulement sur blur ET si le champ a été modifié
+        field.addEventListener('blur', function(event) {
+            // CORRECTION : Ne valider que si le champ a été touché par l'utilisateur
+            if (field.dataset.userModified === 'true') {
+                validateField(event);
+            }
+        });
+        
+        // Marquer le champ comme modifié dès qu'on tape dedans
+        field.addEventListener('input', function(event) {
+            field.dataset.userModified = 'true';
+            clearFieldError(event);
+        });
+        
+        // Pour les select, marquer comme modifié au change
+        if (field.tagName === 'SELECT') {
+            field.addEventListener('change', function(event) {
+                field.dataset.userModified = 'true';
+                clearFieldError(event);
+            });
+        }
     });
 }
 
 /**
- * Valider un champ individuel
+ * CORRECTION : Valider un champ seulement s'il a été modifié
  */
 function validateField(event) {
     const field = event.target;
     const value = field.value.trim();
     
-    if (!value) {
+    // Ne pas valider si le champ n'a pas été modifié par l'utilisateur
+    if (field.dataset.userModified !== 'true') {
+        return;
+    }
+    
+    if (!value && field.hasAttribute('required')) {
         showFieldError(field, 'Ce champ est obligatoire');
     } else {
-        clearFieldError(field);
+        clearFieldError(event);
     }
 }
 
-/**
- * Effacer l'erreur d'un champ
- */
 function clearFieldError(event) {
     const field = event.target;
     field.classList.remove('error');
@@ -120,9 +124,6 @@ function clearFieldError(event) {
     }
 }
 
-/**
- * Afficher une erreur sur un champ
- */
 function showFieldError(field, message) {
     field.classList.add('error');
     
@@ -140,44 +141,30 @@ function showFieldError(field, message) {
     field.parentNode.appendChild(errorElement);
 }
 
-/**
- * Ajouter un nouveau round
- */
 function addRound() {
     roundCounter++;
     
     const template = document.getElementById('roundTemplate');
     const roundElement = template.content.cloneNode(true);
     
-    // Définir l'ID unique du round
     const roundId = `round-${Date.now()}-${roundCounter}`;
     const roundItem = roundElement.querySelector('.round-item');
     roundItem.dataset.roundId = roundId;
     
-    // Mettre à jour le numéro du round
     roundElement.querySelector('.round-number').textContent = roundCounter;
     
-    // Configurer les événements pour ce round
     setupRoundEvents(roundElement, roundId);
     
-    // Ajouter le round au conteneur
     document.getElementById('roundsContainer').appendChild(roundElement);
     
     console.log(`➕ Round ${roundCounter} ajouté (ID: ${roundId})`);
-    
-    // Mettre à jour le message d'information
     updateRoundsInfo();
 }
 
-/**
- * Configurer les événements pour un round
- */
 function setupRoundEvents(roundElement, roundId) {
-    // Bouton de suppression
     const removeBtn = roundElement.querySelector('.remove-round-btn');
     removeBtn.addEventListener('click', () => removeRound(roundId));
     
-    // Upload de graphique
     const uploadArea = roundElement.querySelector('.round-graphic-upload');
     const fileInput = roundElement.querySelector('.round-graphic-input');
     
@@ -185,9 +172,6 @@ function setupRoundEvents(roundElement, roundId) {
     fileInput.addEventListener('change', (e) => handleFileUpload(e, 'round', roundId));
 }
 
-/**
- * Supprimer un round
- */
 function removeRound(roundId) {
     const rounds = document.querySelectorAll('.round-item');
     
@@ -198,7 +182,6 @@ function removeRound(roundId) {
     
     const roundElement = document.querySelector(`[data-round-id="${roundId}"]`);
     if (roundElement) {
-        // Animation de suppression
         roundElement.style.animation = 'slideOutRight 0.3s ease-out';
         
         setTimeout(() => {
@@ -206,7 +189,6 @@ function removeRound(roundId) {
             updateRoundNumbers();
             updateRoundsInfo();
             
-            // Nettoyer les données du round supprimé
             if (FileHandler.roundGraphics[roundId]) {
                 delete FileHandler.roundGraphics[roundId];
             }
@@ -216,9 +198,6 @@ function removeRound(roundId) {
     }
 }
 
-/**
- * Mettre à jour les numéros des rounds après suppression
- */
 function updateRoundNumbers() {
     const rounds = document.querySelectorAll('.round-item');
     roundCounter = rounds.length;
@@ -228,9 +207,6 @@ function updateRoundNumbers() {
     });
 }
 
-/**
- * Mettre à jour les informations sur les rounds
- */
 function updateRoundsInfo() {
     const roundsCount = document.querySelectorAll('.round-item').length;
     const infoElement = document.querySelector('.rounds-info p');
@@ -241,19 +217,14 @@ function updateRoundsInfo() {
     }
 }
 
-/**
- * Gestion des fichiers uploadés
- */
 function handleFileUpload(event, type, roundId = null) {
     const file = event.target.files[0];
     if (!file) return;
     
-    // Validation du fichier
     if (!validateFile(file)) {
         return;
     }
     
-    // Traitement selon le type
     if (type === 'pilot') {
         FileHandler.handlePilotPhoto(file);
     } else if (type === 'round') {
@@ -261,17 +232,12 @@ function handleFileUpload(event, type, roundId = null) {
     }
 }
 
-/**
- * Valider un fichier uploadé
- */
 function validateFile(file) {
-    // Vérifier le type
     if (!file.type.startsWith('image/')) {
         showModal('Erreur', 'Veuillez sélectionner un fichier image (JPG, PNG).', 'error');
         return false;
     }
     
-    // Vérifier la taille (5MB max)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
         showModal('Erreur', 'Le fichier ne doit pas dépasser 5MB.', 'error');
@@ -281,53 +247,39 @@ function validateFile(file) {
     return true;
 }
 
-/**
- * Gérer la soumission du formulaire
- */
 async function handleFormSubmit(event) {
     event.preventDefault();
     
-    // Désactiver le bouton de génération
     const generateBtn = document.getElementById('generateBtn');
     const originalText = generateBtn.innerHTML;
     generateBtn.disabled = true;
     generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...';
     
     try {
-        // Collecter les données du formulaire
         formData = collectFormData();
         
-        // Valider les données
         if (!validateFormData(formData)) {
             return;
         }
         
-        // Afficher le modal de chargement
         showLoadingModal('Génération du rapport PDF en cours...');
         
-        // Générer le PDF
         await PDFGenerator.generateReport(formData);
         
-        // Afficher le succès
         showModal('Succès', 'Le rapport PDF a été généré avec succès !', 'success');
         
     } catch (error) {
         console.error('Erreur lors de la génération:', error);
         showModal('Erreur', `Une erreur est survenue: ${error.message}`, 'error');
     } finally {
-        // Réactiver le bouton
         generateBtn.disabled = false;
         generateBtn.innerHTML = originalText;
     }
 }
 
-/**
- * Collecter toutes les données du formulaire
- */
 function collectFormData() {
     const rounds = [];
     
-    // Collecter les données des rounds
     document.querySelectorAll('.round-item').forEach((roundElement, index) => {
         const roundId = roundElement.dataset.roundId;
         const graphic = FileHandler.roundGraphics[roundId] || null;
@@ -339,26 +291,16 @@ function collectFormData() {
         });
     });
     
-    // Collecter toutes les données
     const data = {
-        // Informations du pilote
         pilotName: document.getElementById('pilotName').value.trim(),
         pilotPhoto: FileHandler.pilotPhotoData,
-        
-        // Informations de l'instructeur
         instructorName: document.getElementById('instructorName').value.trim(),
-        
-        // Détails de la mission
         date: document.getElementById('missionDate').value,
         missionType: document.getElementById('missionType').value,
         missionName: document.getElementById('missionName').value.trim(),
         aircraft: document.getElementById('aircraft').value.trim(),
         map: document.getElementById('map').value.trim(),
-        
-        // Rounds et graphiques
         rounds: rounds,
-        
-        // Métadonnées
         generatedAt: new Date().toISOString(),
         totalRounds: rounds.length
     };
@@ -368,30 +310,25 @@ function collectFormData() {
 }
 
 /**
- * Valider les données du formulaire
+ * CORRECTION : Validation finale plus permissive
  */
 function validateFormData(data) {
     const errors = [];
     
-    // Validation des champs obligatoires
+    // Validation des champs obligatoires uniquement
     if (!data.pilotName) errors.push('Le nom du pilote est obligatoire');
     if (!data.instructorName) errors.push('Le nom de l\'instructeur est obligatoire');
     if (!data.date) errors.push('La date de la mission est obligatoire');
     if (!data.missionType) errors.push('Le type de mission est obligatoire');
     if (!data.aircraft) errors.push('L\'avion utilisé est obligatoire');
     
-    // Validation des rounds
     if (data.rounds.length === 0) {
         errors.push('Au moins un round est requis');
     }
     
-    // Vérifier que chaque round a un graphique
-    const roundsWithoutGraphic = data.rounds.filter(round => !round.graphic);
-    if (roundsWithoutGraphic.length > 0) {
-        errors.push(`${roundsWithoutGraphic.length} round(s) n'ont pas de graphique associé`);
-    }
+    // CORRECTION : Ne plus exiger de graphiques pour tous les rounds
+    // Les rounds sans graphiques auront un placeholder dans le PDF
     
-    // Afficher les erreurs si il y en a
     if (errors.length > 0) {
         const errorMessage = errors.join('\n• ');
         showModal('Validation', `Veuillez corriger les erreurs suivantes:\n\n• ${errorMessage}`, 'error');
@@ -401,18 +338,11 @@ function validateFormData(data) {
     return true;
 }
 
-/**
- * Réinitialiser le formulaire
- */
 function resetForm() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser le formulaire ? Toutes les données seront perdues.')) {
-        // Réinitialiser le formulaire HTML
         document.getElementById('mission-form').reset();
-        
-        // Remettre la date par défaut
         setDefaultDate();
         
-        // Supprimer tous les rounds sauf le premier
         const rounds = document.querySelectorAll('.round-item');
         rounds.forEach((round, index) => {
             if (index > 0) {
@@ -420,14 +350,11 @@ function resetForm() {
             }
         });
         
-        // Réinitialiser le compteur
         roundCounter = 1;
         updateRoundNumbers();
         
-        // Nettoyer les données des fichiers
         FileHandler.reset();
         
-        // Nettoyer les previews
         document.getElementById('pilotPhotoPreview').innerHTML = '';
         document.getElementById('pilotPhotoUpload').classList.remove('has-file');
         
@@ -438,65 +365,51 @@ function resetForm() {
             upload.classList.remove('has-file');
         });
         
+        // CORRECTION : Réinitialiser les flags de modification
+        document.querySelectorAll('input[required], select[required]').forEach(field => {
+            field.dataset.userModified = 'false';
+            field.classList.remove('error');
+        });
+        
         console.log('🔄 Formulaire réinitialisé');
         showModal('Information', 'Le formulaire a été réinitialisé.', 'info');
     }
 }
 
-/**
- * Afficher un modal
- */
 function showModal(title, message, type = 'info') {
     const modal = document.getElementById('statusModal');
     const titleElement = document.getElementById('modalTitle');
     const messageElement = document.getElementById('statusMessage');
     const spinnerElement = document.getElementById('loadingSpinner');
     
-    // Masquer le spinner
     spinnerElement.classList.add('hidden');
     
-    // Définir le titre et le message
     titleElement.textContent = title;
     messageElement.textContent = message;
-    
-    // Définir la classe de style
     messageElement.className = `status-message status-${type}`;
     
-    // Afficher le modal
     modal.classList.remove('hidden');
 }
 
-/**
- * Afficher le modal de chargement
- */
 function showLoadingModal(message) {
     const modal = document.getElementById('statusModal');
     const titleElement = document.getElementById('modalTitle');
     const messageElement = document.getElementById('statusMessage');
     const spinnerElement = document.getElementById('loadingSpinner');
     
-    // Afficher le spinner
     spinnerElement.classList.remove('hidden');
     
-    // Définir le titre et le message
     titleElement.textContent = 'Génération en cours';
     messageElement.textContent = message;
     messageElement.className = 'status-message status-info';
     
-    // Afficher le modal
     modal.classList.remove('hidden');
 }
 
-/**
- * Fermer le modal
- */
 function closeModal() {
     document.getElementById('statusModal').classList.add('hidden');
 }
 
-/**
- * Utilitaires pour le debug et les logs
- */
 const Logger = {
     info: (message, data = null) => {
         console.log(`ℹ️ ${message}`, data || '');
@@ -515,21 +428,14 @@ const Logger = {
     }
 };
 
-/**
- * Gestionnaire d'erreurs global
- */
 window.addEventListener('error', function(event) {
     Logger.error('Erreur JavaScript globale:', event.error);
     showModal('Erreur', 'Une erreur inattendue s\'est produite. Veuillez recharger la page.', 'error');
 });
 
-/**
- * Gestion de la fermeture de l'onglet/fenêtre
- */
 window.addEventListener('beforeunload', function(event) {
-    // Vérifier s'il y a des données non sauvegardées
     const hasData = document.getElementById('pilotName').value.trim() || 
-                   document.getElementById('instructoreName').value.trim() ||
+                   document.getElementById('instructorName').value.trim() ||
                    Object.keys(FileHandler.roundGraphics || {}).length > 0;
     
     if (hasData) {

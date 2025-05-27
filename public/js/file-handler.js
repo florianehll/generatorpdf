@@ -1,6 +1,6 @@
 /**
- * Gestionnaire de fichiers pour l'application ARESIA
- * Gestion des uploads d'images (photos pilote et graphiques)
+ * Gestionnaire de fichiers pour l'application ARESIA - VERSION CORRIGÉE
+ * Gestion des uploads d'images avec validation améliorée et drag & drop
  */
 
 const FileHandler = {
@@ -8,18 +8,78 @@ const FileHandler = {
     pilotPhotoData: null,
     roundGraphics: {},
     
-    // Configuration
+    // Configuration améliorée
     config: {
         maxFileSize: 5 * 1024 * 1024, // 5MB
-        allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'],
-        allowedExtensions: ['.jpg', '.jpeg', '.png', '.gif']
+        allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+        allowedExtensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
+        // Recommandations pour la qualité
+        recommendations: {
+            minWidth: 800,
+            minHeight: 600,
+            optimalRatio: 16/9
+        }
     },
 
     /**
      * Initialisation du gestionnaire de fichiers
      */
     init() {
-        console.log('📁 Gestionnaire de fichiers initialisé');
+        console.log('📁 Gestionnaire de fichiers ARESIA initialisé');
+        this.setupDragAndDrop();
+        this.updateStats();
+    },
+
+    /**
+     * Configuration du drag & drop
+     */
+    setupDragAndDrop() {
+        // Drag & drop pour la photo du pilote
+        const pilotUpload = document.getElementById('pilotPhotoUpload');
+        if (pilotUpload) {
+            this.addDragDropListeners(pilotUpload, (files) => {
+                if (files.length > 0) {
+                    this.handlePilotPhoto(files[0]);
+                }
+            });
+        }
+
+        // Empêcher le drag & drop par défaut sur toute la page
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+    },
+
+    /**
+     * Ajouter les listeners drag & drop à un élément
+     */
+    addDragDropListeners(element, callback) {
+        element.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            element.classList.add('drag-over');
+        });
+
+        element.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        element.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            if (!element.contains(e.relatedTarget)) {
+                element.classList.remove('drag-over');
+            }
+        });
+
+        element.addEventListener('drop', (e) => {
+            e.preventDefault();
+            element.classList.remove('drag-over');
+            
+            const files = Array.from(e.dataTransfer.files);
+            callback(files);
+        });
     },
 
     /**
@@ -32,22 +92,43 @@ const FileHandler = {
             return;
         }
 
+        this.showProcessingState('pilotPhotoUpload');
+
         const reader = new FileReader();
         
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
-                this.pilotPhotoData = e.target.result;
-                this.displayPilotPhotoPreview(e.target.result, file);
-                console.log('✅ Photo du pilote chargée avec succès');
+                const imageData = e.target.result;
+                
+                // Vérifier les dimensions de l'image
+                const metadata = await this.getImageMetadata(imageData);
+                console.log('📊 Métadonnées image pilote:', metadata);
+                
+                // Optimiser l'image si nécessaire
+                const optimizedData = await this.optimizeImage(imageData, {
+                    maxWidth: 400,
+                    maxHeight: 500,
+                    quality: 0.9
+                });
+                
+                this.pilotPhotoData = optimizedData;
+                this.displayPilotPhotoPreview(optimizedData, file, metadata);
+                this.updateStats();
+                
+                console.log('✅ Photo du pilote chargée et optimisée avec succès');
+                this.showToast('Photo du pilote ajoutée avec succès', 'success');
+                
             } catch (error) {
                 console.error('❌ Erreur lors du chargement de la photo:', error);
                 this.showError('Erreur lors du chargement de la photo du pilote');
+                this.hideProcessingState('pilotPhotoUpload');
             }
         };
         
         reader.onerror = () => {
             console.error('❌ Erreur de lecture du fichier photo');
             this.showError('Impossible de lire le fichier image');
+            this.hideProcessingState('pilotPhotoUpload');
         };
         
         reader.readAsDataURL(file);
@@ -63,29 +144,58 @@ const FileHandler = {
             return;
         }
 
+        const roundElement = document.querySelector(`[data-round-id="${roundId}"]`);
+        if (!roundElement) {
+            console.error(`❌ Round ${roundId} non trouvé`);
+            return;
+        }
+
+        const uploadArea = roundElement.querySelector('.round-graphic-upload');
+        this.showProcessingState(uploadArea);
+
         const reader = new FileReader();
         
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
-                this.roundGraphics[roundId] = e.target.result;
-                this.displayRoundGraphicPreview(e.target.result, file, roundId);
+                const imageData = e.target.result;
+                
+                // Vérifier les dimensions
+                const metadata = await this.getImageMetadata(imageData);
+                console.log(`📊 Métadonnées graphique round ${roundId}:`, metadata);
+                
+                // Optimiser pour les graphiques (qualité plus élevée)
+                const optimizedData = await this.optimizeImage(imageData, {
+                    maxWidth: 1920,
+                    maxHeight: 1080,
+                    quality: 0.95
+                });
+                
+                this.roundGraphics[roundId] = optimizedData;
+                this.displayRoundGraphicPreview(optimizedData, file, roundId, metadata);
+                this.updateRoundStatus(roundId);
+                this.updateStats();
+                
                 console.log(`✅ Graphique du round ${roundId} chargé avec succès`);
+                this.showToast(`Graphique du Round ajouté avec succès`, 'success');
+                
             } catch (error) {
                 console.error('❌ Erreur lors du chargement du graphique:', error);
                 this.showError('Erreur lors du chargement du graphique');
+                this.hideProcessingState(uploadArea);
             }
         };
         
         reader.onerror = () => {
             console.error('❌ Erreur de lecture du fichier graphique');
             this.showError('Impossible de lire le fichier graphique');
+            this.hideProcessingState(uploadArea);
         };
         
         reader.readAsDataURL(file);
     },
 
     /**
-     * Valider un fichier
+     * Valider un fichier avec des vérifications étendues
      */
     validateFile(file) {
         // Vérifier si le fichier existe
@@ -95,7 +205,7 @@ const FileHandler = {
         }
 
         // Vérifier le type MIME
-        if (!this.config.allowedTypes.includes(file.type)) {
+        if (!this.config.allowedTypes.includes(file.type.toLowerCase())) {
             this.showError(`Type de fichier non supporté. Types acceptés: ${this.config.allowedTypes.join(', ')}`);
             return false;
         }
@@ -120,13 +230,108 @@ const FileHandler = {
             return false;
         }
 
+        // Vérifier la taille minimale
+        if (file.size < 1024) { // 1KB minimum
+            this.showError('Le fichier semble être corrompu (trop petit)');
+            return false;
+        }
+
         return true;
+    },
+
+    /**
+     * Optimiser une image
+     */
+    optimizeImage(imageData, options = {}) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            const {
+                maxWidth = 1920,
+                maxHeight = 1080,
+                quality = 0.9
+            } = options;
+            
+            img.onload = () => {
+                // Calculer les nouvelles dimensions en gardant le ratio
+                let { width, height } = img;
+                const aspectRatio = width / height;
+                
+                if (width > maxWidth) {
+                    width = maxWidth;
+                    height = width / aspectRatio;
+                }
+                
+                if (height > maxHeight) {
+                    height = maxHeight;
+                    width = height * aspectRatio;
+                }
+                
+                // Redimensionner sur le canvas
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Améliorer la qualité de rendu
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convertir en base64 avec la qualité spécifiée
+                const optimizedImageData = canvas.toDataURL('image/jpeg', quality);
+                resolve(optimizedImageData);
+            };
+            
+            img.src = imageData;
+        });
+    },
+
+    /**
+     * Afficher l'état de traitement
+     */
+    showProcessingState(elementOrSelector) {
+        const element = typeof elementOrSelector === 'string' ? 
+            document.getElementById(elementOrSelector) : elementOrSelector;
+        
+        if (!element) return;
+        
+        element.classList.add('processing');
+        
+        const uploadContent = element.querySelector('.upload-content');
+        if (uploadContent) {
+            const originalContent = uploadContent.innerHTML;
+            uploadContent.dataset.originalContent = originalContent;
+            uploadContent.innerHTML = `
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Traitement en cours...</p>
+            `;
+        }
+    },
+
+    /**
+     * Masquer l'état de traitement
+     */
+    hideProcessingState(elementOrSelector) {
+        const element = typeof elementOrSelector === 'string' ? 
+            document.getElementById(elementOrSelector) : elementOrSelector;
+        
+        if (!element) return;
+        
+        element.classList.remove('processing');
+        
+        const uploadContent = element.querySelector('.upload-content');
+        if (uploadContent && uploadContent.dataset.originalContent) {
+            uploadContent.innerHTML = uploadContent.dataset.originalContent;
+            delete uploadContent.dataset.originalContent;
+        }
     },
 
     /**
      * Afficher la prévisualisation de la photo du pilote
      */
-    displayPilotPhotoPreview(imageData, file) {
+    displayPilotPhotoPreview(imageData, file, metadata) {
         const previewContainer = document.getElementById('pilotPhotoPreview');
         const uploadArea = document.getElementById('pilotPhotoUpload');
         
@@ -135,13 +340,26 @@ const FileHandler = {
             return;
         }
 
-        // Créer l'élément de prévisualisation
+        // Créer l'élément de prévisualisation avec métadonnées
         const previewHTML = `
-            <img src="${imageData}" alt="Photo du pilote">
+            <div class="image-preview-container">
+                <img src="${imageData}" alt="Photo du pilote" class="preview-image">
+                <div class="image-overlay">
+                    <button type="button" class="preview-btn" onclick="FileHandler.showImagePreview('${imageData}', 'Photo du Pilote')">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                </div>
+            </div>
             <div class="file-info">
-                <i class="fas fa-image"></i>
-                <span>${file.name}</span>
-                <small>(${this.formatFileSize(file.size)})</small>
+                <div class="file-main-info">
+                    <i class="fas fa-image"></i>
+                    <span class="filename">${file.name}</span>
+                    <small class="filesize">(${this.formatFileSize(file.size)})</small>
+                </div>
+                <div class="file-meta">
+                    <span class="dimensions">${metadata.width}×${metadata.height}</span>
+                    <span class="megapixels">${metadata.megapixels.toFixed(1)}MP</span>
+                </div>
                 <button type="button" class="remove-file-btn" onclick="FileHandler.removePilotPhoto()">
                     <i class="fas fa-times"></i>
                 </button>
@@ -150,6 +368,7 @@ const FileHandler = {
 
         previewContainer.innerHTML = previewHTML;
         uploadArea.classList.add('has-file');
+        this.hideProcessingState(uploadArea);
 
         // Animer l'apparition
         previewContainer.style.opacity = '0';
@@ -162,7 +381,7 @@ const FileHandler = {
     /**
      * Afficher la prévisualisation d'un graphique de round
      */
-    displayRoundGraphicPreview(imageData, file, roundId) {
+    displayRoundGraphicPreview(imageData, file, roundId, metadata) {
         const roundElement = document.querySelector(`[data-round-id="${roundId}"]`);
         if (!roundElement) {
             console.error(`❌ Round ${roundId} non trouvé`);
@@ -177,13 +396,33 @@ const FileHandler = {
             return;
         }
 
-        // Créer l'élément de prévisualisation
+        // Vérifier si c'est un bon ratio pour les graphiques
+        const isGoodRatio = Math.abs(metadata.aspectRatio - this.config.recommendations.optimalRatio) < 0.1;
+        const qualityIndicator = isGoodRatio ? 'optimal' : 'acceptable';
+
         const previewHTML = `
-            <img src="${imageData}" alt="Graphique de performance">
+            <div class="image-preview-container">
+                <img src="${imageData}" alt="Graphique de performance" class="preview-image">
+                <div class="image-overlay">
+                    <button type="button" class="preview-btn" onclick="FileHandler.showImagePreview('${imageData}', 'Graphique Round ${roundElement.querySelector('.round-number').textContent}')">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <div class="quality-badge ${qualityIndicator}">
+                        <i class="fas fa-${isGoodRatio ? 'check' : 'info'}"></i>
+                        ${isGoodRatio ? 'Optimal' : 'OK'}
+                    </div>
+                </div>
+            </div>
             <div class="file-info">
-                <i class="fas fa-chart-area"></i>
-                <span>${file.name}</span>
-                <small>(${this.formatFileSize(file.size)})</small>
+                <div class="file-main-info">
+                    <i class="fas fa-chart-area"></i>
+                    <span class="filename">${file.name}</span>
+                    <small class="filesize">(${this.formatFileSize(file.size)})</small>
+                </div>
+                <div class="file-meta">
+                    <span class="dimensions">${metadata.width}×${metadata.height}</span>
+                    <span class="ratio">Ratio ${metadata.aspectRatio.toFixed(2)}:1</span>
+                </div>
                 <button type="button" class="remove-file-btn" onclick="FileHandler.removeRoundGraphic('${roundId}')">
                     <i class="fas fa-times"></i>
                 </button>
@@ -192,6 +431,7 @@ const FileHandler = {
 
         previewContainer.innerHTML = previewHTML;
         uploadArea.classList.add('has-file');
+        this.hideProcessingState(uploadArea);
 
         // Animer l'apparition
         previewContainer.style.opacity = '0';
@@ -199,6 +439,43 @@ const FileHandler = {
             previewContainer.style.transition = 'opacity 0.3s ease';
             previewContainer.style.opacity = '1';
         }, 10);
+    },
+
+    /**
+     * Afficher une prévisualisation d'image en grand
+     */
+    showImagePreview(imageData, title) {
+        const modal = document.createElement('div');
+        modal.className = 'modal image-preview-modal';
+        modal.innerHTML = `
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h4><i class="fas fa-image"></i> ${title}</h4>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="image-preview-large">
+                        <img src="${imageData}" alt="${title}" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Fermer en cliquant à l'extérieur
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
     },
 
     /**
@@ -223,7 +500,9 @@ const FileHandler = {
             fileInput.value = '';
         }
         
+        this.updateStats();
         console.log('🗑️ Photo du pilote supprimée');
+        this.showToast('Photo du pilote supprimée', 'info');
     },
 
     /**
@@ -251,7 +530,65 @@ const FileHandler = {
             fileInput.value = '';
         }
         
+        this.updateRoundStatus(roundId);
+        this.updateStats();
+        
         console.log(`🗑️ Graphique du round ${roundId} supprimé`);
+        this.showToast('Graphique supprimé', 'info');
+    },
+
+    /**
+     * Mettre à jour le statut d'un round
+     */
+    updateRoundStatus(roundId) {
+        const roundElement = document.querySelector(`[data-round-id="${roundId}"]`);
+        if (!roundElement) return;
+
+        const statusIndicator = roundElement.querySelector('.status-indicator');
+        const hasGraphic = this.roundGraphics[roundId] !== undefined;
+        
+        if (statusIndicator) {
+            if (hasGraphic) {
+                statusIndicator.setAttribute('data-status', 'ready');
+                statusIndicator.innerHTML = `
+                    <i class="fas fa-check-circle"></i>
+                    <span class="status-text">Prêt</span>
+                `;
+            } else {
+                statusIndicator.setAttribute('data-status', 'empty');
+                statusIndicator.innerHTML = `
+                    <i class="fas fa-circle"></i>
+                    <span class="status-text">En attente</span>
+                `;
+            }
+        }
+    },
+
+    /**
+     * Mettre à jour les statistiques
+     */
+    updateStats() {
+        const totalRounds = document.querySelectorAll('.round-item').length;
+        const withGraphics = Object.keys(this.roundGraphics).length;
+        const completionRate = totalRounds > 0 ? Math.round((withGraphics / totalRounds) * 100) : 0;
+
+        // Mettre à jour les éléments de statistiques
+        const totalElement = document.getElementById('totalRounds');
+        const graphicsElement = document.getElementById('withGraphics');
+        const rateElement = document.getElementById('completionRate');
+
+        if (totalElement) totalElement.textContent = totalRounds;
+        if (graphicsElement) graphicsElement.textContent = withGraphics;
+        if (rateElement) rateElement.textContent = `${completionRate}%`;
+
+        // Mettre à jour l'info des rounds
+        const infoElement = document.querySelector('.rounds-info .info-text p:last-child');
+        if (infoElement) {
+            infoElement.innerHTML = `
+                <strong>Statut :</strong> ${withGraphics}/${totalRounds} rounds avec graphiques 
+                (${completionRate}% complété)
+            `;
+        }
     },
 
     /**
@@ -275,17 +612,80 @@ const FileHandler = {
     },
 
     /**
-     * Afficher une erreur
+     * Afficher une erreur avec toast
      */
     showError(message) {
         console.error('❌ FileHandler Error:', message);
+        this.showToast(message, 'error');
         
-        // Utiliser le système de notification de l'app principale si disponible
+        // Fallback pour les navigateurs sans support des toasts
         if (window.AppController && window.AppController.showModal) {
             window.AppController.showModal('Erreur de fichier', message, 'error');
-        } else {
-            alert(`Erreur: ${message}`);
         }
+    },
+
+    /**
+     * Afficher un toast de notification
+     */
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-${this.getToastIcon(type)}"></i>
+                <span>${message}</span>
+            </div>
+            <button class="toast-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        const container = document.getElementById('toastContainer');
+        if (container) {
+            container.appendChild(toast);
+            
+            // Animation d'entrée
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            // Suppression automatique après 5 secondes
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+    },
+
+    /**
+     * Obtenir l'icône pour un type de toast
+     */
+    getToastIcon(type) {
+        const icons = {
+            success: 'check-circle',
+            error: 'exclamation-circle',
+            warning: 'exclamation-triangle',
+            info: 'info-circle'
+        };
+        return icons[type] || 'info-circle';
+    },
+
+    /**
+     * Obtenir les métadonnées d'une image
+     */
+    getImageMetadata(imageData) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                resolve({
+                    width: img.width,
+                    height: img.height,
+                    aspectRatio: img.width / img.height,
+                    megapixels: (img.width * img.height) / 1000000
+                });
+            };
+            
+            img.src = imageData;
+        });
     },
 
     /**
@@ -339,136 +739,63 @@ const FileHandler = {
     reset() {
         this.pilotPhotoData = null;
         this.roundGraphics = {};
+        this.updateStats();
         console.log('🔄 Données des fichiers réinitialisées');
     },
 
     /**
-     * Sauvegarder les données dans le localStorage (optionnel)
+     * Dupliquer un graphique de round
      */
-    saveToLocalStorage() {
-        try {
-            const data = {
-                pilotPhoto: this.pilotPhotoData,
-                roundGraphics: this.roundGraphics,
-                timestamp: Date.now()
-            };
-            localStorage.setItem('aresia_file_data', JSON.stringify(data));
-            console.log('💾 Données sauvegardées dans le localStorage');
-        } catch (error) {
-            console.warn('⚠️ Impossible de sauvegarder dans le localStorage:', error);
+    duplicateRoundGraphic(sourceRoundId, targetRoundId) {
+        if (this.roundGraphics[sourceRoundId]) {
+            this.roundGraphics[targetRoundId] = this.roundGraphics[sourceRoundId];
+            this.updateRoundStatus(targetRoundId);
+            this.updateStats();
+            console.log(`📋 Graphique dupliqué du round ${sourceRoundId} vers ${targetRoundId}`);
+            this.showToast('Graphique dupliqué avec succès', 'success');
         }
     },
 
     /**
-     * Charger les données depuis le localStorage (optionnel)
+     * Configurer le drag & drop pour un nouveau round
      */
-    loadFromLocalStorage() {
-        try {
-            const data = localStorage.getItem('aresia_file_data');
-            if (data) {
-                const parsedData = JSON.parse(data);
-                this.pilotPhotoData = parsedData.pilotPhoto;
-                this.roundGraphics = parsedData.roundGraphics || {};
-                console.log('📥 Données chargées depuis le localStorage');
-                return true;
-            }
-        } catch (error) {
-            console.warn('⚠️ Impossible de charger depuis le localStorage:', error);
-        }
-        return false;
-    },
+    setupRoundDragDrop(roundId) {
+        const roundElement = document.querySelector(`[data-round-id="${roundId}"]`);
+        if (!roundElement) return;
 
-    /**
-     * Supprimer les données du localStorage
-     */
-    clearLocalStorage() {
-        try {
-            localStorage.removeItem('aresia_file_data');
-            console.log('🗑️ Données supprimées du localStorage');
-        } catch (error) {
-            console.warn('⚠️ Impossible de supprimer du localStorage:', error);
-        }
-    },
-
-    /**
-     * Redimensionner une image (utilitaire)
-     */
-    resizeImage(imageData, maxWidth = 800, maxHeight = 600, quality = 0.8) {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            
-            img.onload = () => {
-                // Calculer les nouvelles dimensions
-                let { width, height } = img;
-                
-                if (width > height) {
-                    if (width > maxWidth) {
-                        height = (height * maxWidth) / width;
-                        width = maxWidth;
-                    }
-                } else {
-                    if (height > maxHeight) {
-                        width = (width * maxHeight) / height;
-                        height = maxHeight;
-                    }
+        const uploadArea = roundElement.querySelector('.round-graphic-upload');
+        if (uploadArea) {
+            this.addDragDropListeners(uploadArea, (files) => {
+                if (files.length > 0) {
+                    this.handleRoundGraphic(files[0], roundId);
                 }
-                
-                // Redimensionner
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                // Convertir en base64
-                const resizedImageData = canvas.toDataURL('image/jpeg', quality);
-                resolve(resizedImageData);
-            };
-            
-            img.src = imageData;
-        });
+            });
+        }
     },
 
     /**
-     * Convertir une image en différents formats
+     * Valider la qualité d'une image
      */
-    convertImageFormat(imageData, format = 'image/jpeg', quality = 0.9) {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            
-            img.onload = () => {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-                
-                const convertedImageData = canvas.toDataURL(format, quality);
-                resolve(convertedImageData);
-            };
-            
-            img.src = imageData;
-        });
-    },
+    validateImageQuality(metadata, type = 'general') {
+        const recommendations = this.config.recommendations;
+        const issues = [];
 
-    /**
-     * Obtenir les métadonnées d'une image
-     */
-    getImageMetadata(imageData) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            
-            img.onload = () => {
-                resolve({
-                    width: img.width,
-                    height: img.height,
-                    aspectRatio: img.width / img.height,
-                    megapixels: (img.width * img.height) / 1000000
-                });
-            };
-            
-            img.src = imageData;
-        });
+        if (metadata.width < recommendations.minWidth || metadata.height < recommendations.minHeight) {
+            issues.push(`Résolution faible (${metadata.width}×${metadata.height}). Recommandé: au moins ${recommendations.minWidth}×${recommendations.minHeight}`);
+        }
+
+        if (type === 'graphic') {
+            const ratioScore = Math.abs(metadata.aspectRatio - recommendations.optimalRatio);
+            if (ratioScore > 0.2) {
+                issues.push(`Ratio d'aspect non optimal (${metadata.aspectRatio.toFixed(2)}:1). Recommandé: ${recommendations.optimalRatio.toFixed(2)}:1 (16:9)`);
+            }
+        }
+
+        return {
+            isGood: issues.length === 0,
+            issues: issues,
+            score: Math.max(0, 100 - (issues.length * 25))
+        };
     }
 };
 
