@@ -1,6 +1,7 @@
 /**
  * Générateur PDF pour l'application ARESIA
  * Création de rapports PDF conformes à la charte graphique ARESIA
+ * Version avec images intégrées
  */
 
 const PDFGenerator = {
@@ -30,7 +31,76 @@ const PDFGenerator = {
                 small: 10,
                 tiny: 8
             }
+        },
+        images: {
+            logo: 'assets/images/logo.png',
+            aircraft1: 'assets/images/avion1.jpg',
+            aircraft2: 'assets/images/AVION2.jpg'
         }
+    },
+
+    // Cache pour les images
+    imageCache: {},
+
+    /**
+     * Précharger les images nécessaires
+     */
+    async preloadImages() {
+        console.log('🖼️ Préchargement des images...');
+        
+        const imagesToLoad = [
+            { key: 'logo', path: this.config.images.logo },
+            { key: 'aircraft1', path: this.config.images.aircraft1 },
+            { key: 'aircraft2', path: this.config.images.aircraft2 }
+        ];
+
+        const loadPromises = imagesToLoad.map(img => this.loadImageAsBase64(img.key, img.path));
+        
+        try {
+            await Promise.all(loadPromises);
+            console.log('✅ Images préchargées avec succès');
+        } catch (error) {
+            console.warn('⚠️ Certaines images n\'ont pas pu être chargées:', error);
+        }
+    },
+
+    /**
+     * Charger une image et la convertir en base64
+     */
+    async loadImageAsBase64(key, imagePath) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    this.imageCache[key] = {
+                        data: canvas.toDataURL('image/jpeg', 0.8),
+                        width: img.width,
+                        height: img.height
+                    };
+                    
+                    console.log(`✅ Image ${key} chargée (${img.width}x${img.height})`);
+                    resolve(this.imageCache[key]);
+                } catch (error) {
+                    console.warn(`⚠️ Erreur lors du traitement de l'image ${key}:`, error);
+                    reject(error);
+                }
+            };
+            
+            img.onerror = () => {
+                console.warn(`⚠️ Impossible de charger l'image: ${imagePath}`);
+                reject(new Error(`Failed to load image: ${imagePath}`));
+            };
+            
+            img.src = imagePath;
+        });
     },
 
     /**
@@ -40,6 +110,9 @@ const PDFGenerator = {
         console.log('📄 Début de la génération du rapport PDF');
         
         try {
+            // Précharger les images
+            await this.preloadImages();
+            
             // Créer une nouvelle instance jsPDF
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('portrait', 'mm', 'a4');
@@ -70,13 +143,14 @@ const PDFGenerator = {
     async generateCoverPage(pdf, data) {
         console.log('📋 Génération de la page de couverture');
         
-        const { pageWidth, pageHeight, margin, colors, fonts } = this.config;
+        // Ajouter l'image d'avion en arrière-plan
+        await this.addAircraftBackground(pdf);
         
         // Fond dégradé pour l'en-tête
         this.addGradientHeader(pdf);
         
-        // Logo et titre ARESIA
-        this.addAresiaLogo(pdf);
+        // Logo ARESIA
+        await this.addAresiaLogo(pdf);
         
         // Titre principal
         this.addMainTitle(pdf);
@@ -103,6 +177,44 @@ const PDFGenerator = {
     },
 
     /**
+     * Ajouter l'image d'avion en arrière-plan
+     */
+    async addAircraftBackground(pdf) {
+        const { pageWidth, pageHeight } = this.config;
+        
+        try {
+            // Utiliser l'image d'avion 1 comme arrière-plan principal
+            if (this.imageCache.aircraft1) {
+                const aircraft = this.imageCache.aircraft1;
+                
+                // Calculer les dimensions pour couvrir toute la page avec opacité
+                const aspectRatio = aircraft.width / aircraft.height;
+                let bgWidth = pageWidth;
+                let bgHeight = pageWidth / aspectRatio;
+                
+                if (bgHeight < pageHeight) {
+                    bgHeight = pageHeight;
+                    bgWidth = pageHeight * aspectRatio;
+                }
+                
+                // Centrer l'image
+                const xPos = (pageWidth - bgWidth) / 2;
+                const yPos = (pageHeight - bgHeight) / 2;
+                
+                // Ajouter l'image avec transparence
+                pdf.saveGraphicsState();
+                pdf.setGState(new pdf.GState({ opacity: 0.08 }));
+                pdf.addImage(aircraft.data, 'JPEG', xPos, yPos, bgWidth, bgHeight);
+                pdf.restoreGraphicsState();
+                
+                console.log('✅ Image d\'avion ajoutée en arrière-plan');
+            }
+        } catch (error) {
+            console.warn('⚠️ Impossible d\'ajouter l\'image d\'avion en arrière-plan:', error);
+        }
+    },
+
+    /**
      * Ajouter l'en-tête avec dégradé
      */
     addGradientHeader(pdf) {
@@ -117,31 +229,61 @@ const PDFGenerator = {
             const rgb = this.hexToRgb(colors.aresiaNavy);
             
             pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+            pdf.saveGraphicsState();
             pdf.setGState(new pdf.GState({ opacity: alpha }));
             pdf.rect(0, i * (headerHeight / steps), pageWidth, headerHeight / steps, 'F');
+            pdf.restoreGraphicsState();
         }
-        
-        // Réinitialiser l'opacité
-        pdf.setGState(new pdf.GState({ opacity: 1 }));
     },
 
     /**
      * Ajouter le logo ARESIA
      */
-    addAresiaLogo(pdf) {
+    async addAresiaLogo(pdf) {
         const { pageWidth, colors, fonts } = this.config;
         
-        // Logo simulé avec du texte
+        try {
+            // Utiliser le vrai logo si disponible
+            if (this.imageCache.logo) {
+                const logo = this.imageCache.logo;
+                const logoWidth = 40;
+                const logoHeight = (logoWidth * logo.height) / logo.width;
+                
+                pdf.addImage(logo.data, 'PNG', pageWidth - logoWidth - 20, 12, logoWidth, logoHeight);
+                
+                // Tagline sous le logo
+                pdf.setTextColor(colors.white);
+                pdf.setFontSize(fonts.sizes.small);
+                pdf.setFont(fonts.primary, 'normal');
+                const taglineText = 'Bolder together';
+                const taglineWidth = pdf.getTextWidth(taglineText);
+                pdf.text(taglineText, pageWidth - taglineWidth - 20, 12 + logoHeight + 8);
+                
+                console.log('✅ Logo ARESIA ajouté');
+            } else {
+                // Fallback vers le texte
+                this.addTextLogo(pdf);
+            }
+        } catch (error) {
+            console.warn('⚠️ Erreur avec le logo, utilisation du texte:', error);
+            this.addTextLogo(pdf);
+        }
+    },
+
+    /**
+     * Ajouter le logo en mode texte (fallback)
+     */
+    addTextLogo(pdf) {
+        const { pageWidth, colors, fonts } = this.config;
+        
         pdf.setTextColor(colors.white);
         pdf.setFontSize(fonts.sizes.subtitle);
         pdf.setFont(fonts.primary, 'bold');
         
-        // Positionnement en haut à droite
         const logoText = 'ARESIA';
         const logoWidth = pdf.getTextWidth(logoText);
         pdf.text(logoText, pageWidth - logoWidth - 20, 20);
         
-        // Tagline
         pdf.setFontSize(fonts.sizes.small);
         pdf.setFont(fonts.primary, 'normal');
         const taglineText = 'Bolder together';
@@ -173,20 +315,24 @@ const PDFGenerator = {
         const sectionWidth = (pageWidth - 3 * margin) / 2;
         const sectionHeight = 50;
         
-        // Fond de la section
+        // Fond de la section avec bordure
         pdf.setFillColor(...this.hexToRgb(colors.lightGray).values());
         pdf.rect(margin, yPos, sectionWidth, sectionHeight, 'F');
         
-        // Bordure
+        // Bordure colorée
         pdf.setDrawColor(...this.hexToRgb(colors.aresiaNavy).values());
-        pdf.setLineWidth(1);
+        pdf.setLineWidth(2);
         pdf.rect(margin, yPos, sectionWidth, sectionHeight, 'S');
         
+        // Barre de titre colorée
+        pdf.setFillColor(...this.hexToRgb(colors.aresiaNavy).values());
+        pdf.rect(margin, yPos, sectionWidth, 8, 'F');
+        
         // Titre de la section
-        pdf.setTextColor(colors.aresiaNavy);
-        pdf.setFontSize(fonts.sizes.heading);
+        pdf.setTextColor(colors.white);
+        pdf.setFontSize(fonts.sizes.subheading);
         pdf.setFont(fonts.primary, 'bold');
-        pdf.text('PILOT', margin + 5, yPos + 15);
+        pdf.text('PILOT', margin + 5, yPos + 6);
         
         // Informations du pilote
         pdf.setFontSize(fonts.sizes.body);
@@ -213,16 +359,20 @@ const PDFGenerator = {
         pdf.setFillColor(...this.hexToRgb(colors.lightGray).values());
         pdf.rect(xPos, yPos, sectionWidth, sectionHeight, 'F');
         
-        // Bordure
+        // Bordure colorée
         pdf.setDrawColor(...this.hexToRgb(colors.aresiaNavy).values());
-        pdf.setLineWidth(1);
+        pdf.setLineWidth(2);
         pdf.rect(xPos, yPos, sectionWidth, sectionHeight, 'S');
         
+        // Barre de titre colorée
+        pdf.setFillColor(...this.hexToRgb(colors.aresiaNavy).values());
+        pdf.rect(xPos, yPos, sectionWidth, 8, 'F');
+        
         // Titre de la section
-        pdf.setTextColor(colors.aresiaNavy);
-        pdf.setFontSize(fonts.sizes.heading);
+        pdf.setTextColor(colors.white);
+        pdf.setFontSize(fonts.sizes.subheading);
         pdf.setFont(fonts.primary, 'bold');
-        pdf.text('INSTRUCTOR', xPos + 5, yPos + 15);
+        pdf.text('INSTRUCTOR', xPos + 5, yPos + 6);
         
         // Informations de l'instructeur
         pdf.setFontSize(fonts.sizes.body);
@@ -245,16 +395,20 @@ const PDFGenerator = {
         pdf.setFillColor(...this.hexToRgb(colors.lightGray).values());
         pdf.rect(margin, yPos, sectionWidth, sectionHeight, 'F');
         
-        // Bordure
+        // Bordure colorée
         pdf.setDrawColor(...this.hexToRgb(colors.aresiaNavy).values());
-        pdf.setLineWidth(1);
+        pdf.setLineWidth(2);
         pdf.rect(margin, yPos, sectionWidth, sectionHeight, 'S');
         
+        // Barre de titre colorée
+        pdf.setFillColor(...this.hexToRgb(colors.aresiaNavy).values());
+        pdf.rect(margin, yPos, sectionWidth, 12, 'F');
+        
         // Titre de la section
-        pdf.setTextColor(colors.aresiaNavy);
+        pdf.setTextColor(colors.white);
         pdf.setFontSize(fonts.sizes.heading);
         pdf.setFont(fonts.primary, 'bold');
-        pdf.text('TRAINING DETAILS', margin + 5, yPos + 15);
+        pdf.text('TRAINING DETAILS', margin + 5, yPos + 9);
         
         // Détails de la mission
         pdf.setFontSize(fonts.sizes.body);
@@ -271,7 +425,11 @@ const PDFGenerator = {
         ];
         
         details.forEach((detail, index) => {
-            pdf.text(detail, margin + 5, yPos + 30 + (index * 8));
+            const row = Math.floor(index / 2);
+            const col = index % 2;
+            const xPos = margin + 5 + (col * (sectionWidth / 2));
+            const yPos2 = yPos + 25 + (row * 8);
+            pdf.text(detail, xPos, yPos2);
         });
         
         return yPos + sectionHeight + 10;
@@ -281,7 +439,7 @@ const PDFGenerator = {
      * Ajouter la photo du pilote
      */
     async addPilotPhoto(pdf, photoData) {
-        const { pageWidth, margin } = this.config;
+        const { pageWidth, margin, colors } = this.config;
         
         try {
             // Calculer la position (coin supérieur droit de la section mission)
@@ -290,12 +448,16 @@ const PDFGenerator = {
             const xPos = pageWidth - margin - photoWidth - 5;
             const yPos = 140;
             
+            // Bordure décorative autour de la photo
+            pdf.setFillColor(...this.hexToRgb(colors.aresiaNavy).values());
+            pdf.rect(xPos - 2, yPos - 2, photoWidth + 4, photoHeight + 4, 'F');
+            
             // Ajouter la photo
             pdf.addImage(photoData, 'JPEG', xPos, yPos, photoWidth, photoHeight);
             
-            // Bordure autour de la photo
-            pdf.setDrawColor(...this.hexToRgb(this.config.colors.aresiaNavy).values());
-            pdf.setLineWidth(0.5);
+            // Cadre blanc fin
+            pdf.setDrawColor(255, 255, 255);
+            pdf.setLineWidth(1);
             pdf.rect(xPos, yPos, photoWidth, photoHeight, 'S');
             
         } catch (error) {
@@ -312,6 +474,9 @@ const PDFGenerator = {
         // Nouvelle page pour les rounds
         pdf.addPage();
         
+        // Ajouter une image d'avion subtile en arrière-plan des pages de rounds
+        await this.addRoundsPageBackground(pdf);
+        
         // Titre de la page
         this.addRoundsPageTitle(pdf);
         
@@ -327,6 +492,7 @@ const PDFGenerator = {
             // Vérifier si on a besoin d'une nouvelle page
             if (yPos > 200) {
                 pdf.addPage();
+                await this.addRoundsPageBackground(pdf);
                 yPos = 30;
             }
             
@@ -342,6 +508,33 @@ const PDFGenerator = {
     },
 
     /**
+     * Ajouter l'arrière-plan pour les pages de rounds
+     */
+    async addRoundsPageBackground(pdf) {
+        try {
+            if (this.imageCache.aircraft2) {
+                const { pageWidth, pageHeight } = this.config;
+                const aircraft = this.imageCache.aircraft2;
+                
+                // Image plus subtile pour les pages de contenu
+                pdf.saveGraphicsState();
+                pdf.setGState(new pdf.GState({ opacity: 0.03 }));
+                
+                const aspectRatio = aircraft.width / aircraft.height;
+                const bgWidth = pageWidth * 0.8;
+                const bgHeight = bgWidth / aspectRatio;
+                const xPos = (pageWidth - bgWidth) / 2;
+                const yPos = pageHeight - bgHeight - 50;
+                
+                pdf.addImage(aircraft.data, 'JPEG', xPos, yPos, bgWidth, bgHeight);
+                pdf.restoreGraphicsState();
+            }
+        } catch (error) {
+            console.warn('⚠️ Impossible d\'ajouter l\'arrière-plan des pages rounds:', error);
+        }
+    },
+
+    /**
      * Ajouter le titre de la page des rounds
      */
     addRoundsPageTitle(pdf) {
@@ -351,6 +544,11 @@ const PDFGenerator = {
         pdf.setFontSize(fonts.sizes.title);
         pdf.setFont(fonts.primary, 'bold');
         pdf.text('Training Simulation Report - Shots Details', 20, 30);
+        
+        // Ligne décorative sous le titre
+        pdf.setDrawColor(...this.hexToRgb(colors.aresiaBlue).values());
+        pdf.setLineWidth(2);
+        pdf.line(20, 35, 190, 35);
     },
 
     /**
@@ -375,13 +573,16 @@ const PDFGenerator = {
     async addRoundSection(pdf, round, yPos) {
         const { pageWidth, margin, colors, fonts } = this.config;
         
-        // Titre du round
-        pdf.setFontSize(fonts.sizes.heading);
-        pdf.setTextColor(colors.aresiaNavy);
-        pdf.setFont(fonts.primary, 'bold');
-        pdf.text(`Round ${round.number}`, margin, yPos);
+        // Titre du round avec style amélioré
+        pdf.setFillColor(...this.hexToRgb(colors.aresiaBlue).values());
+        pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 15, 'F');
         
-        yPos += 15;
+        pdf.setFontSize(fonts.sizes.heading);
+        pdf.setTextColor(colors.white);
+        pdf.setFont(fonts.primary, 'bold');
+        pdf.text(`Round ${round.number}`, margin + 5, yPos + 5);
+        
+        yPos += 20;
         
         // Graphique du round (si disponible)
         if (round.graphic) {
@@ -389,30 +590,42 @@ const PDFGenerator = {
                 const graphicWidth = pageWidth - 2 * margin;
                 const graphicHeight = 80;
                 
+                // Bordure décorative autour du graphique
+                pdf.setFillColor(...this.hexToRgb(colors.lightGray).values());
+                pdf.rect(margin - 2, yPos - 2, graphicWidth + 4, graphicHeight + 4, 'F');
+                
                 pdf.addImage(round.graphic, 'JPEG', margin, yPos, graphicWidth, graphicHeight);
                 
-                // Bordure autour du graphique
+                // Cadre autour du graphique
                 pdf.setDrawColor(...this.hexToRgb(colors.aresiaNavy).values());
-                pdf.setLineWidth(0.5);
+                pdf.setLineWidth(1);
                 pdf.rect(margin, yPos, graphicWidth, graphicHeight, 'S');
                 
-                yPos += graphicHeight + 10;
+                yPos += graphicHeight + 15;
                 
             } catch (error) {
                 console.warn(`⚠️ Impossible d'ajouter le graphique du round ${round.number}:`, error);
                 
-                // Placeholder pour graphique manquant
+                // Placeholder stylisé pour graphique manquant
+                pdf.setFillColor(240, 240, 240);
+                pdf.rect(margin, yPos, pageWidth - 2 * margin, 40, 'F');
+                
                 pdf.setFontSize(fonts.sizes.body);
                 pdf.setTextColor(colors.darkGray);
-                pdf.text('Graphique non disponible', margin, yPos + 20);
-                yPos += 40;
+                pdf.text('Graphique non disponible', margin + 5, yPos + 25);
+                yPos += 50;
             }
         } else {
-            // Placeholder pour graphique manquant
+            // Placeholder stylisé
+            pdf.setFillColor(245, 245, 245);
+            pdf.rect(margin, yPos, pageWidth - 2 * margin, 30, 'F');
+            pdf.setDrawColor(200, 200, 200);
+            pdf.rect(margin, yPos, pageWidth - 2 * margin, 30, 'S');
+            
             pdf.setFontSize(fonts.sizes.body);
             pdf.setTextColor(colors.darkGray);
-            pdf.text('Aucun graphique fourni pour ce round', margin, yPos + 10);
-            yPos += 30;
+            pdf.text('Aucun graphique fourni pour ce round', margin + 5, yPos + 20);
+            yPos += 40;
         }
         
         return yPos + 10;
@@ -424,9 +637,9 @@ const PDFGenerator = {
     addFooter(pdf, pageNumber) {
         const { pageWidth, pageHeight, margin, colors, fonts } = this.config;
         
-        // Ligne de séparation
-        pdf.setDrawColor(...this.hexToRgb(colors.aresiaNavy).values());
-        pdf.setLineWidth(0.5);
+        // Ligne de séparation colorée
+        pdf.setDrawColor(...this.hexToRgb(colors.aresiaBlue).values());
+        pdf.setLineWidth(1);
         pdf.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
         
         // Informations du pied de page
@@ -441,18 +654,14 @@ const PDFGenerator = {
         // Numéro de page
         pdf.text(`Page ${pageNumber}`, pageWidth - margin - 20, pageHeight - 10);
         
-        // Logo ARESIA petit
+        // Logo ARESIA petit au centre
         pdf.setTextColor(colors.aresiaNavy);
         pdf.setFont(fonts.primary, 'bold');
         pdf.text('ARESIA', pageWidth / 2 - 10, pageHeight - 10);
     },
 
     /**
-     * Utilitaires
-     */
-    
-    /**
-     * Convertir couleur hex en RGB
+     * Utilitaires - Convertir couleur hex en RGB
      */
     hexToRgb(hex) {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -491,71 +700,6 @@ const PDFGenerator = {
         const missionType = data.missionType ? data.missionType.replace(/\s+/g, '_') : 'Mission';
         
         return `Rapport_Mission_${pilotName}_${missionType}_${missionDate}.pdf`;
-    },
-
-    /**
-     * Calculer les dimensions optimales pour une image
-     */
-    calculateImageDimensions(maxWidth, maxHeight, imageWidth, imageHeight) {
-        const aspectRatio = imageWidth / imageHeight;
-        
-        let width = maxWidth;
-        let height = maxWidth / aspectRatio;
-        
-        if (height > maxHeight) {
-            height = maxHeight;
-            width = maxHeight * aspectRatio;
-        }
-        
-        return { width, height };
-    },
-
-    /**
-     * Ajouter une bordure décorative
-     */
-    addDecorativeBorder(pdf, x, y, width, height, color = null) {
-        const borderColor = color || this.config.colors.aresiaBlue;
-        
-        pdf.setDrawColor(...this.hexToRgb(borderColor).values());
-        pdf.setLineWidth(2);
-        
-        // Coins décoratifs
-        const cornerSize = 10;
-        
-        // Coin supérieur gauche
-        pdf.line(x, y, x + cornerSize, y);
-        pdf.line(x, y, x, y + cornerSize);
-        
-        // Coin supérieur droit
-        pdf.line(x + width - cornerSize, y, x + width, y);
-        pdf.line(x + width, y, x + width, y + cornerSize);
-        
-        // Coin inférieur gauche
-        pdf.line(x, y + height - cornerSize, x, y + height);
-        pdf.line(x, y + height, x + cornerSize, y + height);
-        
-        // Coin inférieur droit
-        pdf.line(x + width, y + height - cornerSize, x + width, y + height);
-        pdf.line(x + width - cornerSize, y + height, x + width, y + height);
-    },
-
-    /**
-     * Ajouter un filigrane
-     */
-    addWatermark(pdf, text = 'ARESIA') {
-        const { pageWidth, pageHeight, colors } = this.config;
-        
-        pdf.setGState(new pdf.GState({ opacity: 0.1 }));
-        pdf.setTextColor(colors.aresiaNavy);
-        pdf.setFontSize(60);
-        pdf.setFont('helvetica', 'bold');
-        
-        // Centrer le texte et le faire tourner
-        const textWidth = pdf.getTextWidth(text);
-        pdf.text(text, pageWidth / 2 - textWidth / 2, pageHeight / 2, { angle: 45 });
-        
-        // Réinitialiser l'opacité
-        pdf.setGState(new pdf.GState({ opacity: 1 }));
     }
 };
 
